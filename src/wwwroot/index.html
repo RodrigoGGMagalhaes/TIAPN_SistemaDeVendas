@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vendas - Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        <h2>CONTROLE DE VENDAS</h2>
+    </div>
+    <nav class="menu">
+        <a href="index.html" class="active">Dashboard</a>
+        <a href="entradas.html">Entradas de Estoque</a>
+        <a href="saidas.html">Saídas / Vendas</a>
+        <a href="Clientes.html">Clientes</a>
+        <a href="fornecedores.html">Fornecedores</a>
+    </nav>
+    <a href="#" id="btn-logout" class="logout">Sair</a>
+</aside>
+
+<main class="main-content">
+    <header class="topbar">
+        <div class="user-info">
+            <span id="nome-usuario-sessao">Olá, Usuário</span>
+            <div class="avatar"></div>
+        </div>
+    </header>
+
+    <section class="summary-cards">
+        <div class="card">
+            <h3>Entradas Hoje</h3>
+            <div class="card-value">
+                <span class="icon">📦</span>
+                <span id="card-entradas-hoje">0</span>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Total em Estoque</h3>
+            <div class="card-value">
+                <span class="icon">📈</span>
+                <span id="card-estoque">0 un</span>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Fornecedores Cadastrados</h3>
+            <div class="card-value">
+                <span class="icon">🚚</span>
+                <span id="card-fornecedores">0</span>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Última Entrada</h3>
+            <div class="card-value">
+                <span class="icon">📅</span>
+                <span id="card-ultima-entrada" style="font-size:1rem; color:#4299e1;">--/--/----</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="charts-section" style="display:flex;gap:20px;margin:0 20px 30px;">
+        <div class="chart-card" style="flex:2;min-height:320px;background:var(--card-bg);padding:20px;border-radius:8px;">
+            <h3 style="margin-bottom:12px;">Movimentação de Entradas (últimos 7 dias)</h3>
+            <div style="position:relative;height:230px;width:100%">
+                <canvas id="graficoEntradasCanvas"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" style="flex:1;min-height:320px;background:var(--card-bg);padding:20px;border-radius:8px;">
+            <h3 style="margin-bottom:12px;">Status do Estoque</h3>
+            <div style="position:relative;height:230px;width:100%">
+                <canvas id="graficoStatusCanvas"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <footer class="table-section" style="padding:0 20px 30px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3>Lista de Produtos e Nível de Estoque</h3>
+            <button id="btnNovoProduto" class="btn-primary">+ Novo Produto</button>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>PRODUTO</th>
+                        <th>VALOR UNITÁRIO</th>
+                        <th>ESTOQUE FÍSICO</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-estoque"></tbody>
+            </table>
+        </div>
+    </footer>
+</main>
+
+<!-- Modal Produto -->
+<div id="modalProduto" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="tituloModal">Cadastrar Novo Produto</h2>
+            <button id="btnFecharModal" class="close-btn">&times;</button>
+        </div>
+        <form id="formProduto">
+            <input type="hidden" id="produtoId">
+            <div class="input-group">
+                <label for="nomeProduto">Nome do Produto</label>
+                <input type="text" id="nomeProduto" placeholder="Ex: Queijo Minas Padrão" required>
+            </div>
+            <div style="display:flex;gap:15px;">
+                <div class="input-group" style="flex:1;">
+                    <label for="precoProduto">Preço Unitário (R$)</label>
+                    <input type="number" step="0.01" id="precoProduto" placeholder="0.00" required>
+                </div>
+                <div class="input-group" style="flex:1;">
+                    <label for="qtdProduto">Estoque Inicial</label>
+                    <input type="number" id="qtdProduto" value="0" min="0" required>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Salvar Produto</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div id="modalExcluirProduto" class="modal-overlay">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h2>Confirmar Exclusão</h2>
+            <button id="btnFecharExcluir" class="close-btn">&times;</button>
+        </div>
+        <p style="margin-bottom:20px;">Tem certeza que deseja excluir este produto?</p>
+        <div class="modal-actions">
+            <button id="btnCancelarExcluir" class="btn-secondary">Cancelar</button>
+            <button id="btnConfirmarExcluir" class="btn-primary" style="background:var(--red-accent);">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const ctxEntradas = document.getElementById('graficoEntradasCanvas').getContext('2d');
+    const ctxStatus   = document.getElementById('graficoStatusCanvas').getContext('2d');
+    let chartEntradas = null;
+    let chartStatus   = null;
+    let produtoParaExcluir = null;
+
+    // --- Sessão ---
+    async function checarSessao() {
+        try {
+            const res = await fetch('/api/auth/sessao');
+            if (!res.ok) { window.location.href = 'login.html'; return; }
+            const d = await res.json();
+            document.getElementById('nome-usuario-sessao').innerText = `Olá, ${d.nome}`;
+        } catch { window.location.href = 'login.html'; }
+    }
+
+    // --- Dashboard (Cards + Gráficos) ---
+    async function carregarDashboard() {
+        try {
+            const res = await fetch('/api/dashboard/dados');
+            if (!res.ok) return;
+            const d = await res.json();
+
+            document.getElementById('card-entradas-hoje').innerText = d.cards.entradasHoje;
+            document.getElementById('card-estoque').innerText       = d.cards.totalEstoque + ' un';
+            document.getElementById('card-fornecedores').innerText  = d.cards.totalFornecedores;
+            document.getElementById('card-ultima-entrada').innerText = d.cards.ultimaEntrada;
+
+            if (chartEntradas) chartEntradas.destroy();
+            if (chartStatus)   chartStatus.destroy();
+
+            chartEntradas = new Chart(ctxEntradas, {
+                type: 'bar',
+                data: {
+                    labels: ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],
+                    datasets: [{ label: 'Itens Entrados', data: d.graficoEntradas, backgroundColor: '#4299e1', borderRadius: 4 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Monta labels com quantidades reais de itens
+            const se = d.statusEstoque;
+            const totalItensStatus = se.emEstoque + se.reservado;
+            const statusLabels = [
+                `Normal (${se.emEstoque} un)`,
+                `Baixo (${se.reservado} un)`,
+                `Zerado (${se.emFalta} prod.)`
+            ];
+            // Se não há dados, exibe gráfico vazio com mensagem
+            const statusData = (se.semDados)
+                ? [1, 0, 0]
+                : [se.emEstoque, se.reservado, se.emFalta];
+
+            chartStatus = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: ['#3182ce', '#ecc94b', '#e53e3e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, padding: 10 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    if (se.semDados) return ' Sem produtos cadastrados';
+                                    const label = ctx.label || '';
+                                    return ' ' + label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (err) { console.error("Erro dashboard:", err); }
+    }
+
+    // --- Tabela de Produtos ---
+    async function listarProdutos() {
+        try {
+            const res = await fetch('/api/produtos');
+            if (!res.ok) return;
+            const produtos = await res.json();
+            const tbody = document.getElementById('tabela-estoque');
+            tbody.innerHTML = '';
+            if (produtos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum produto cadastrado.</td></tr>';
+                return;
+            }
+            produtos.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${p.id}</td>
+                    <td><strong>${p.nome}</strong></td>
+                    <td>R$ ${p.preco.toFixed(2)}</td>
+                    <td><span style="background:#eaecf4;padding:4px 8px;border-radius:4px;">${p.quantidadeEstoque} un</span></td>
+                    <td>
+                        <div class="action-icons">
+                            <button class="action-btn" title="Editar" onclick="abrirEdicaoProduto(${p.id})">✏️</button>
+                            <button class="action-btn" title="Excluir" onclick="confirmarExclusaoProduto(${p.id})">🗑️</button>
+                        </div>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+        } catch (err) { console.error(err); }
+    }
+
+    // --- CRUD Produto ---
+    async function recarregar() {
+        await carregarDashboard();
+        await listarProdutos();
+    }
+
+    window.abrirEdicaoProduto = async (id) => {
+        try {
+            const res = await fetch('/api/produtos');
+            const produtos = await res.json();
+            const p = produtos.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('produtoId').value = p.id;
+            document.getElementById('nomeProduto').value = p.nome;
+            document.getElementById('precoProduto').value = p.preco;
+            document.getElementById('qtdProduto').value = p.quantidadeEstoque;
+            document.getElementById('tituloModal').innerText = `Editar Produto: ${p.nome}`;
+            document.getElementById('modalProduto').classList.add('active');
+        } catch (err) { console.error(err); }
+    };
+
+    window.confirmarExclusaoProduto = (id) => {
+        produtoParaExcluir = id;
+        document.getElementById('modalExcluirProduto').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarExcluir').addEventListener('click', async () => {
+        if (!produtoParaExcluir) return;
+        try {
+            const res = await fetch(`/api/produtos/${produtoParaExcluir}`, { method: 'DELETE' });
+            if (res.ok) {
+                document.getElementById('modalExcluirProduto').classList.remove('active');
+                produtoParaExcluir = null;
+                await recarregar();
+            } else { alert('Erro ao excluir produto.'); }
+        } catch { alert('Erro de rede.'); }
+    });
+
+    document.getElementById('btnFecharExcluir').addEventListener('click', () => document.getElementById('modalExcluirProduto').classList.remove('active'));
+    document.getElementById('btnCancelarExcluir').addEventListener('click', () => document.getElementById('modalExcluirProduto').classList.remove('active'));
+
+    document.getElementById('formProduto').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('produtoId').value;
+        const prod = {
+            nome: document.getElementById('nomeProduto').value,
+            preco: parseFloat(document.getElementById('precoProduto').value),
+            quantidadeEstoque: parseInt(document.getElementById('qtdProduto').value)
+        };
+        try {
+            const url    = id ? `/api/produtos/${id}` : '/api/produtos';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(prod) });
+            if (res.ok) {
+                document.getElementById('modalProduto').classList.remove('active');
+                document.getElementById('formProduto').reset();
+                document.getElementById('produtoId').value = '';
+                await recarregar();
+            } else { alert('Erro ao salvar produto.'); }
+        } catch { alert('Erro de rede.'); }
+    });
+
+    document.getElementById('btnNovoProduto').addEventListener('click', () => {
+        document.getElementById('formProduto').reset();
+        document.getElementById('produtoId').value = '';
+        document.getElementById('tituloModal').innerText = 'Cadastrar Novo Produto';
+        document.getElementById('modalProduto').classList.add('active');
+    });
+    document.getElementById('btnFecharModal').addEventListener('click', () => document.getElementById('modalProduto').classList.remove('active'));
+    document.getElementById('btnCancelarModal').addEventListener('click', () => document.getElementById('modalProduto').classList.remove('active'));
+
+    document.getElementById('btn-logout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = 'login.html';
+    });
+
+    checarSessao();
+    carregarDashboard();
+    listarProdutos();
+});
+</script>
+</body>
+</html>

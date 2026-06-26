@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso - Artesano Pimentel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-slate-100 h-screen flex items-center justify-center font-sans">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-slate-200">
+        <div class="flex justify-center mb-6 border-b border-slate-200">
+            <button id="btnTabLogin"
+                class="w-1/2 pb-3 text-lg font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none"
+                onclick="mudarAba('login')">Entrar</button>
+            <button id="btnTabCad" class="w-1/2 pb-3 text-lg font-semibold text-slate-400 focus:outline-none"
+                onclick="mudarAba('cadastro')">Cadastrar</button>
+        </div>
+
+        <div id="alerta" class="hidden mb-4 p-3 rounded text-sm text-center"></div>
+
+        <form id="formLogin" onsubmit="realizarLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+                <input type="email" id="loginEmail" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                <input type="password" id="loginSenha" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">Entrar
+                no Sistema</button>
+        </form>
+
+        <form id="formCadastro" onsubmit="realizarCadastro(event)" class="space-y-4 hidden">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nome Completo</label>
+                <input type="text" id="cadNome" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+                <input type="email" id="cadEmail" required
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                <input type="password" id="cadSenha" required minlength="6"
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+            </div>
+            <button type="submit"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition shadow-md">Criar
+                Conta</button>
+        </form>
+    </div>
+
+    <script>
+        function mudarAba(tipo) {
+            const tabL = document.getElementById('btnTabLogin');
+            const tabC = document.getElementById('btnTabCad');
+            const fL = document.getElementById('formLogin');
+            const fC = document.getElementById('formCadastro');
+            document.getElementById('alerta').classList.add('hidden');
+
+            if (tipo === 'login') {
+                tabL.className = "w-1/2 pb-3 text-lg font-semibold text-blue-600 border-b-2 border-blue-600 focus:outline-none";
+                tabC.className = "w-1/2 pb-3 text-lg font-semibold text-slate-400 focus:outline-none";
+                fL.classList.remove('hidden');
+                fC.classList.add('hidden');
+            } else {
+                tabC.className = "w-1/2 pb-3 text-lg font-semibold text-green-600 border-b-2 border-green-600 focus:outline-none";
+                tabL.className = "w-1/2 pb-3 text-lg font-semibold text-slate-400 focus:outline-none";
+                fC.classList.remove('hidden');
+                fL.classList.add('hidden');
+            }
+        }
+
+        function mostrarAlerta(msg, sucesso = false) {
+            const box = document.getElementById('alerta');
+            box.innerText = msg;
+            box.className = `mb-4 p-3 rounded text-sm text-center ${sucesso ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+            box.classList.remove('hidden');
+        }
+
+        async function realizarLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const senha = document.getElementById('loginSenha').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, senha })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    window.location.href = 'index.html'; // Redireciona para o painel principal
+                } else {
+                    mostrarAlerta(data.mensagem);
+                }
+            } catch {
+                mostrarAlerta('Erro ao conectar ao banco local.');
+            }
+        }
+
+        async function realizarCadastro(e) {
+            e.preventDefault();
+            const nome = document.getElementById('cadNome').value;
+            const email = document.getElementById('cadEmail').value;
+            const senha = document.getElementById('cadSenha').value;
+
+            try {
+                const res = await fetch('/api/auth/cadastro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, email, senha })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    mostrarAlerta('Conta criada com sucesso! Acesse a aba Entrar.', true);
+                    document.getElementById('formCadastro').reset();
+                    mudarAba('login');
+                } else {
+                    mostrarAlerta(data.mensagem);
+                }
+            } catch {
+                mostrarAlerta('Erro ao salvar no banco local.');
+            }
+        }
+    </script>
+</body>
+
+</html>

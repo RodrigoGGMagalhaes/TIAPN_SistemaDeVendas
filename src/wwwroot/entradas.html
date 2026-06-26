@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vendas - Entradas de Estoque</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        <h2>CONTROLE DE VENDAS</h2>
+    </div>
+    <nav class="menu">
+        <a href="index.html">Dashboard</a>
+        <a href="entradas.html" class="active">Entradas de Estoque</a>
+        <a href="saidas.html">Saídas / Vendas</a>
+        <a href="Clientes.html">Clientes</a>
+        <a href="fornecedores.html">Fornecedores</a>
+    </nav>
+    <a href="#" id="btn-logout" class="logout">Sair</a>
+</aside>
+
+<main class="main-content">
+    <header class="topbar">
+        <div class="user-info">
+            <span id="nome-usuario-sessao">Olá, Usuário</span>
+            <div class="avatar"></div>
+        </div>
+    </header>
+
+    <section class="page-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 class="page-title">Entradas de Estoque</h2>
+            <button class="btn-primary" id="btnNovaEntrada">+ Registrar Entrada</button>
+        </div>
+
+        <!-- Cards de resumo -->
+        <div style="display:flex;gap:16px;margin-bottom:20px;">
+            <div class="card" style="flex:1;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.85rem;color:#718096;">Total Investido em Estoque</span>
+                    <h3 id="totalInvestido" style="font-size:1.7rem;margin:4px 0 0;color:#e53e3e;">R$ 0,00</h3>
+                </div>
+                <div style="font-size:2rem;">💸</div>
+            </div>
+            <div class="card" style="flex:1;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.85rem;color:#718096;">Total de Itens Recebidos</span>
+                    <h3 id="totalItensEntrados" style="font-size:1.7rem;margin:4px 0 0;color:#4299e1;">0 un</h3>
+                </div>
+                <div style="font-size:2rem;">📦</div>
+            </div>
+            <div class="card" style="flex:1;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.85rem;color:#718096;">Nº de Entradas</span>
+                    <h3 id="totalNumEntradas" style="font-size:1.7rem;margin:4px 0 0;color:#9f7aea;">0</h3>
+                </div>
+                <div style="font-size:2rem;">📋</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>PRODUTO</th>
+                            <th>FORNECEDOR</th>
+                            <th>QTD ENTRADA</th>
+                            <th>PREÇO UNIT.</th>
+                            <th>VALOR PAGO</th>
+                            <th>DATA/HORA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entradasTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination-footer">
+                <span id="entradasInfo" class="pagination-info">0 entradas registradas</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Modal Registrar Entrada -->
+<div id="modalEntrada" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Registrar Entrada de Estoque</h2>
+            <button id="btnFecharModal" class="close-btn">&times;</button>
+        </div>
+        <form id="formEntrada">
+            <div class="input-group">
+                <label for="selectProduto">Produto</label>
+                <select id="selectProduto" required style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-bg);">
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="selectFornecedor">Fornecedor</label>
+                <select id="selectFornecedor" required style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-bg);">
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="qtdEntrada">Quantidade</label>
+                <input type="number" id="qtdEntrada" min="1" value="1" required>
+            </div>
+            <div id="previewEntrada" style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:6px;padding:10px 14px;margin-bottom:12px;display:none;">
+                <span style="font-size:0.85rem;color:#718096;">Valor estimado a pagar:</span>
+                <strong id="previewEntradaTexto" style="display:block;font-size:1.1rem;color:#e53e3e;margin-top:2px;">R$ 0,00</strong>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Confirmar Entrada</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabelaCorpo   = document.getElementById('entradasTableBody');
+    const selectProduto = document.getElementById('selectProduto');
+    const selectFornec  = document.getElementById('selectFornecedor');
+    let produtosCache = [];
+
+    function formatBRL(valor) {
+        return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    async function checarSessao() {
+        try {
+            const res = await fetch('/api/auth/sessao');
+            if (!res.ok) { window.location.href = 'login.html'; return; }
+            const d = await res.json();
+            document.getElementById('nome-usuario-sessao').innerText = `Olá, ${d.nome}`;
+        } catch { window.location.href = 'login.html'; }
+    }
+
+    async function carregarEntradas() {
+        try {
+            const res = await fetch('/api/entradas');
+            if (!res.ok) return;
+            const entradas = await res.json();
+            tabelaCorpo.innerHTML = '';
+
+            if (entradas.length === 0) {
+                tabelaCorpo.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nenhuma entrada registrada.</td></tr>';
+                document.getElementById('entradasInfo').innerText = '0 entradas registradas';
+                document.getElementById('totalInvestido').innerText = 'R$ 0,00';
+                document.getElementById('totalItensEntrados').innerText = '0 un';
+                document.getElementById('totalNumEntradas').innerText = '0';
+                return;
+            }
+
+            let totalInvestido = 0;
+            let totalItens = 0;
+
+            entradas.forEach(e => {
+                totalInvestido += Number(e.valorPago || 0);
+                totalItens += Number(e.quantidade);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${e.id}</td>
+                    <td><strong>${e.produto}</strong></td>
+                    <td>${e.fornecedor}</td>
+                    <td>
+                        <span style="background:#d4f7e5;color:#008a3e;padding:4px 10px;border-radius:4px;font-weight:600;">
+                            +${e.quantidade} un
+                        </span>
+                    </td>
+                    <td style="color:#718096;">${formatBRL(e.precoUnitario || 0)}</td>
+                    <td style="color:#e53e3e;font-weight:bold;">${formatBRL(e.valorPago || 0)}</td>
+                    <td>${e.data}</td>`;
+                tabelaCorpo.appendChild(tr);
+            });
+
+            document.getElementById('totalInvestido').innerText = formatBRL(totalInvestido);
+            document.getElementById('totalItensEntrados').innerText = totalItens + ' un';
+            document.getElementById('totalNumEntradas').innerText = entradas.length;
+            document.getElementById('entradasInfo').innerText = `${entradas.length} entrada(s) registrada(s)`;
+        } catch (err) { console.error("Erro ao carregar entradas:", err); }
+    }
+
+    async function carregarModal() {
+        try {
+            const [resProd, resForn] = await Promise.all([fetch('/api/produtos'), fetch('/api/fornecedores')]);
+            produtosCache = await resProd.json();
+            const fornecedores = await resForn.json();
+
+            selectProduto.innerHTML = '<option value="">-- Escolha um Produto --</option>';
+            produtosCache.forEach(p => {
+                selectProduto.innerHTML += `<option value="${p.id}" data-preco="${p.preco}">📦 ${p.nome} (Estoque: ${p.quantidadeEstoque}) — ${formatBRL(p.preco)}/un</option>`;
+            });
+
+            selectFornec.innerHTML = '<option value="">-- Escolha um Fornecedor --</option>';
+            if (fornecedores.length === 0) {
+                selectFornec.innerHTML += '<option value="" disabled>Nenhum fornecedor cadastrado</option>';
+            } else {
+                fornecedores.forEach(f => {
+                    selectFornec.innerHTML += `<option value="${f.id}">🏭 ${f.nome}</option>`;
+                });
+            }
+
+            atualizarPreview();
+        } catch (err) { console.error("Erro ao carregar modal:", err); }
+    }
+
+    function atualizarPreview() {
+        const opt = selectProduto.options[selectProduto.selectedIndex];
+        const qtd = parseInt(document.getElementById('qtdEntrada').value) || 0;
+        const preco = opt ? parseFloat(opt.getAttribute('data-preco')) || 0 : 0;
+        const div = document.getElementById('previewEntrada');
+        if (opt && opt.value && qtd > 0) {
+            div.style.display = 'block';
+            document.getElementById('previewEntradaTexto').innerText = formatBRL(preco * qtd);
+        } else {
+            div.style.display = 'none';
+        }
+    }
+
+    selectProduto.addEventListener('change', atualizarPreview);
+    document.getElementById('qtdEntrada').addEventListener('input', atualizarPreview);
+
+    document.getElementById('formEntrada').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const prodId = parseInt(selectProduto.value);
+        const fornId = parseInt(selectFornec.value);
+        if (!prodId || !fornId) { alert('Selecione produto e fornecedor.'); return; }
+
+        const entrada = {
+            produtoId:    prodId,
+            fornecedorId: fornId,
+            quantidade:   parseInt(document.getElementById('qtdEntrada').value)
+        };
+        try {
+            const res = await fetch('/api/entradas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entrada)
+            });
+            if (res.ok) {
+                document.getElementById('modalEntrada').classList.remove('active');
+                document.getElementById('formEntrada').reset();
+                document.getElementById('previewEntrada').style.display = 'none';
+                await carregarEntradas();
+            } else {
+                const err = await res.json().catch(() => ({ mensagem: 'Erro desconhecido.' }));
+                alert(err.mensagem || 'Erro ao registrar entrada.');
+            }
+        } catch { alert('Erro de conexão.'); }
+    });
+
+    document.getElementById('btnNovaEntrada').addEventListener('click', () => {
+        carregarModal();
+        document.getElementById('modalEntrada').classList.add('active');
+    });
+    document.getElementById('btnFecharModal').addEventListener('click', () => document.getElementById('modalEntrada').classList.remove('active'));
+    document.getElementById('btnCancelarModal').addEventListener('click', () => document.getElementById('modalEntrada').classList.remove('active'));
+
+    document.getElementById('btn-logout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = 'login.html';
+    });
+
+    checarSessao();
+    carregarEntradas();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vendas - Saídas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .lucro-positivo { color: #1cc88a; font-weight: bold; }
+        .lucro-negativo { color: #e53e3e; font-weight: bold; }
+        .preco-hint { font-size:0.78rem; color:#718096; margin-top:4px; }
+        .tag-qtd-saida {
+            background:#fde8e8; color:#c53030;
+            padding:3px 10px; border-radius:4px; font-weight:600;
+        }
+        .preview-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 14px;
+            display: none;
+        }
+        .preview-box .pv-row {
+            display: flex; justify-content: space-between;
+            font-size: 0.88rem; margin-bottom: 4px; color: #718096;
+        }
+        .preview-box .pv-row strong { color: var(--text-color); }
+        .preview-box .pv-total {
+            display: flex; justify-content: space-between;
+            font-size: 1rem; margin-top: 8px;
+            border-top: 1px solid var(--border-color); padding-top: 8px;
+        }
+        .input-preco-wrapper { position: relative; }
+        .input-preco-wrapper span {
+            position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+            color: #718096; font-size: 0.9rem; pointer-events: none;
+        }
+        .input-preco-wrapper input { padding-left: 28px !important; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        <h2>CONTROLE DE VENDAS</h2>
+    </div>
+    <nav class="menu">
+        <a href="index.html">Dashboard</a>
+        <a href="entradas.html">Entradas de Estoque</a>
+        <a href="saidas.html" class="active">Saídas / Vendas</a>
+        <a href="Clientes.html">Clientes</a>
+        <a href="fornecedores.html">Fornecedores</a>
+    </nav>
+    <a href="#" id="btn-logout" class="logout">Sair</a>
+</aside>
+
+<main class="main-content">
+    <header class="topbar">
+        <div class="user-info">
+            <span id="nome-usuario-sessao">Olá, Usuário</span>
+            <div class="avatar"></div>
+        </div>
+    </header>
+
+    <section class="page-container">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h2 class="page-title">Histórico de Saídas / Vendas</h2>
+            <button class="btn-primary" id="btnNovaSaida">+ Registrar Saída</button>
+        </div>
+
+        <!-- Cards de Resumo -->
+        <div style="display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+            <div class="card" style="flex:1;min-width:160px;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.82rem;color:#718096;">Total Faturado</span>
+                    <h3 id="totalFaturado" style="font-size:1.6rem;margin:4px 0 0;color:#1cc88a;">R$ 0,00</h3>
+                </div>
+                <div style="font-size:1.8rem;">💰</div>
+            </div>
+            <div class="card" style="flex:1;min-width:160px;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.82rem;color:#718096;">Lucro Total</span>
+                    <h3 id="lucroTotal" style="font-size:1.6rem;margin:4px 0 0;color:#1cc88a;">R$ 0,00</h3>
+                </div>
+                <div style="font-size:1.8rem;">📈</div>
+            </div>
+            <div class="card" style="flex:1;min-width:160px;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.82rem;color:#718096;">Itens Vendidos</span>
+                    <h3 id="totalItens" style="font-size:1.6rem;margin:4px 0 0;color:#4299e1;">0 un</h3>
+                </div>
+                <div style="font-size:1.8rem;">📦</div>
+            </div>
+            <div class="card" style="flex:1;min-width:160px;padding:18px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <span style="font-size:0.82rem;color:#718096;">Nº de Vendas</span>
+                    <h3 id="numVendas" style="font-size:1.6rem;margin:4px 0 0;color:#9f7aea;">0</h3>
+                </div>
+                <div style="font-size:1.8rem;">🧾</div>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="card">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>PRODUTO</th>
+                            <th>CLIENTE</th>
+                            <th>QTD SAÍDA</th>
+                            <th>PREÇO VENDA</th>
+                            <th>VALOR OBTIDO</th>
+                            <th>LUCRO</th>
+                            <th>DATA</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="saidasTableBody">
+                        <tr><td colspan="9" style="text-align:center;padding:20px;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination-footer">
+                <span id="saidasInfo" class="pagination-info">—</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Modal Registrar Saída -->
+<div id="modalSaida" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Registrar Nova Saída (Venda)</h2>
+            <button id="btnFecharModal" class="close-btn">&times;</button>
+        </div>
+
+        <div class="input-group">
+            <label for="selectProduto">Produto</label>
+            <select id="selectProduto" required style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-bg);">
+                <option value="">Carregando...</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label for="selectCliente">Cliente</label>
+            <select id="selectCliente" required style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:4px;background:var(--card-bg);">
+                <option value="">Carregando...</option>
+            </select>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+            <div class="input-group" style="flex:1;">
+                <label for="qtdSaida">Quantidade</label>
+                <input type="number" id="qtdSaida" min="1" value="1" required>
+            </div>
+            <div class="input-group" style="flex:1;">
+                <label for="precoVenda">
+                    Preço de Venda (R$/un)
+                    <span title="Altere para definir o preço real de venda (diferente do preço cadastrado)" style="cursor:help;">ℹ️</span>
+                </label>
+                <div class="input-preco-wrapper">
+                    <span>R$</span>
+                    <input type="number" id="precoVenda" step="0.01" min="0.01" placeholder="0,00" required>
+                </div>
+                <p class="preco-hint" id="precoHint">Preço cadastrado: R$ —</p>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-box" id="previewBox">
+            <div class="pv-row"><span>Preço de custo (cadastrado):</span><strong id="pvCusto">R$ —</strong></div>
+            <div class="pv-row"><span>Preço de venda definido:</span><strong id="pvVenda">R$ —</strong></div>
+            <div class="pv-row"><span>Quantidade:</span><strong id="pvQtd">—</strong></div>
+            <div class="pv-total">
+                <span style="font-weight:600;">Total da venda:</span>
+                <strong id="pvTotal" style="color:#1cc88a;font-size:1.1rem;">R$ —</strong>
+            </div>
+            <div class="pv-total" style="margin-top:4px;padding-top:4px;border-top:none;">
+                <span style="font-weight:600;">Lucro estimado:</span>
+                <strong id="pvLucro" style="font-size:1.05rem;">R$ —</strong>
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            <button type="button" id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+            <button type="button" id="btnConfirmarVenda" class="btn-primary">Confirmar Venda</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div id="modalExcluir" class="modal-overlay">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h2>Confirmar Exclusão</h2>
+            <button id="btnFecharExcluir" class="close-btn">&times;</button>
+        </div>
+        <p style="margin-bottom:20px;">Deseja cancelar esta venda? O estoque será restaurado.</p>
+        <div class="modal-actions">
+            <button id="btnCancelarExcluir" class="btn-secondary">Cancelar</button>
+            <button id="btnConfirmarExcluir" class="btn-primary" style="background:var(--red-accent);">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabelaCorpo   = document.getElementById('saidasTableBody');
+    const selectProduto = document.getElementById('selectProduto');
+    const selectCliente = document.getElementById('selectCliente');
+    const inputPreco    = document.getElementById('precoVenda');
+    const inputQtd      = document.getElementById('qtdSaida');
+    let vendaParaExcluir = null;
+    let produtosCache    = [];
+
+    function fmt(valor) {
+        return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    }
+
+    // ── Sessão ──────────────────────────────────────────────────────────
+    async function checarSessao() {
+        try {
+            const res = await fetch('/api/auth/sessao');
+            if (!res.ok) { window.location.href = 'login.html'; return; }
+            const d = await res.json();
+            document.getElementById('nome-usuario-sessao').innerText = `Olá, ${d.nome}`;
+        } catch { window.location.href = 'login.html'; }
+    }
+
+    // ── Carregar histórico ───────────────────────────────────────────────
+    async function carregarSaidas() {
+        tabelaCorpo.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">Carregando...</td></tr>';
+        try {
+            const res = await fetch('/api/pedidos');
+            if (!res.ok) {
+                tabelaCorpo.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#e53e3e;">Erro ao carregar dados (status ${res.status}).</td></tr>`;
+                return;
+            }
+            const saidas = await res.json();
+
+            if (!Array.isArray(saidas) || saidas.length === 0) {
+                tabelaCorpo.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;">Nenhuma venda registrada.</td></tr>';
+                atualizarCards([], []);
+                return;
+            }
+
+            tabelaCorpo.innerHTML = '';
+            let totalFaturado = 0, totalLucro = 0, totalItens = 0;
+
+            saidas.forEach(s => {
+                const valorTotal  = Number(s.valorTotal  || 0);
+                const precoVenda  = Number(s.precoVenda  || 0);
+                const precoCusto  = s.produtoPreco != null ? Number(s.produtoPreco) : 0;
+                const qtd         = Number(s.quantidade  || 0);
+                // Lucro = (preço venda - preço custo do produto) × qtd
+                // Quando precoVenda não foi salvo (registros antigos), estimamos do valorTotal
+                const pv = precoVenda > 0 ? precoVenda : (qtd > 0 ? valorTotal / qtd : 0);
+                const lucro = (pv - precoCusto) * qtd;
+
+                totalFaturado += valorTotal;
+                totalLucro    += isNaN(lucro) ? 0 : lucro;
+                totalItens    += qtd;
+
+                const data = new Date(s.data + (s.data.includes('Z') ? '' : 'Z')).toLocaleDateString('pt-BR');
+                const lucroTexto = isNaN(lucro)
+                    ? '<span style="color:#718096;">—</span>'
+                    : `<span class="${lucro >= 0 ? 'lucro-positivo' : 'lucro-negativo'}">${fmt(lucro)}</span>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${s.id}</td>
+                    <td><strong>${s.produtoNome || '—'}</strong></td>
+                    <td>${s.clienteNome || 'Consumidor Final'}</td>
+                    <td><span class="tag-qtd-saida">-${qtd} un</span></td>
+                    <td style="color:#4299e1;font-weight:500;">${pv > 0 ? fmt(pv) : '—'}</td>
+                    <td style="color:#1cc88a;font-weight:bold;">${fmt(valorTotal)}</td>
+                    <td>${lucroTexto}</td>
+                    <td>${data}</td>
+                    <td><button class="action-btn" title="Cancelar venda" onclick="cancelarVenda(${s.id})">🗑️</button></td>`;
+                tabelaCorpo.appendChild(tr);
+            });
+
+            document.getElementById('totalFaturado').innerText = fmt(totalFaturado);
+            document.getElementById('lucroTotal').innerText    = fmt(totalLucro);
+            document.getElementById('lucroTotal').className    = totalLucro >= 0 ? 'lucro-positivo' : 'lucro-negativo';
+            document.getElementById('lucroTotal').style.fontSize = '1.6rem';
+            document.getElementById('totalItens').innerText   = totalItens + ' un';
+            document.getElementById('numVendas').innerText    = saidas.length;
+            document.getElementById('saidasInfo').innerText   = `${saidas.length} venda(s) registrada(s)`;
+
+        } catch (err) {
+            console.error("Erro ao carregar saídas:", err);
+            tabelaCorpo.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#e53e3e;">Erro de conexão.</td></tr>';
+        }
+    }
+
+    function atualizarCards() {
+        document.getElementById('totalFaturado').innerText = fmt(0);
+        document.getElementById('lucroTotal').innerText    = fmt(0);
+        document.getElementById('totalItens').innerText   = '0 un';
+        document.getElementById('numVendas').innerText    = '0';
+        document.getElementById('saidasInfo').innerText   = '0 vendas registradas';
+    }
+
+    // ── Modal: carregar selects ──────────────────────────────────────────
+    async function carregarModal() {
+        selectProduto.innerHTML = '<option value="">Carregando...</option>';
+        selectCliente.innerHTML = '<option value="">Carregando...</option>';
+        try {
+            const [resProd, resCli] = await Promise.all([fetch('/api/produtos'), fetch('/api/clientes')]);
+            produtosCache = await resProd.json();
+            const clientes = await resCli.json();
+
+            selectProduto.innerHTML = '<option value="">-- Escolha um Produto --</option>';
+            produtosCache.forEach(p => {
+                selectProduto.innerHTML += `<option value="${p.id}" data-preco="${p.preco}" data-estoque="${p.quantidadeEstoque}">📦 ${p.nome} (${p.quantidadeEstoque} un) — custo ${fmt(p.preco)}</option>`;
+            });
+
+            selectCliente.innerHTML = '<option value="">-- Escolha um Cliente --</option>';
+            clientes.filter(c => c.status === 'Ativo').forEach(c => {
+                selectCliente.innerHTML += `<option value="${c.id}">👤 ${c.nome}</option>`;
+            });
+
+            // Pré-preenche preço ao carregar
+            atualizarCampoPrecoPorProduto();
+        } catch (err) { console.error("Erro ao carregar modal:", err); }
+    }
+
+    // Quando troca o produto, preenche o campo com o preço cadastrado
+    function atualizarCampoPrecoPorProduto() {
+        const opt = selectProduto.options[selectProduto.selectedIndex];
+        if (opt && opt.value) {
+            const preco = parseFloat(opt.getAttribute('data-preco')) || 0;
+            inputPreco.value = preco.toFixed(2);
+            document.getElementById('precoHint').innerText = `Preço cadastrado: ${fmt(preco)}`;
+        } else {
+            inputPreco.value = '';
+            document.getElementById('precoHint').innerText = 'Selecione um produto primeiro';
+        }
+        atualizarPreview();
+    }
+
+    selectProduto.addEventListener('change', atualizarCampoPrecoPorProduto);
+
+    // Atualiza preview ao digitar preço ou quantidade
+    function atualizarPreview() {
+        const opt    = selectProduto.options[selectProduto.selectedIndex];
+        const qtd    = parseInt(inputQtd.value) || 0;
+        const pv     = parseFloat(inputPreco.value) || 0;
+        const custo  = opt ? parseFloat(opt.getAttribute('data-preco')) || 0 : 0;
+        const box    = document.getElementById('previewBox');
+
+        if (opt && opt.value && qtd > 0 && pv > 0) {
+            box.style.display = 'block';
+            const total = pv * qtd;
+            const lucro = (pv - custo) * qtd;
+            document.getElementById('pvCusto').innerText = fmt(custo);
+            document.getElementById('pvVenda').innerText = fmt(pv);
+            document.getElementById('pvQtd').innerText   = qtd + ' un';
+            document.getElementById('pvTotal').innerText = fmt(total);
+            const pvLucroEl = document.getElementById('pvLucro');
+            pvLucroEl.innerText  = fmt(lucro);
+            pvLucroEl.className  = lucro >= 0 ? 'lucro-positivo' : 'lucro-negativo';
+        } else {
+            box.style.display = 'none';
+        }
+    }
+
+    inputPreco.addEventListener('input', atualizarPreview);
+    inputQtd.addEventListener('input', atualizarPreview);
+
+    // ── Confirmar venda ──────────────────────────────────────────────────
+    document.getElementById('btnConfirmarVenda').addEventListener('click', async () => {
+        const prodId = parseInt(selectProduto.value);
+        const cliId  = parseInt(selectCliente.value);
+        const qtd    = parseInt(inputQtd.value);
+        const pv     = parseFloat(inputPreco.value);
+
+        if (!prodId)       { alert('Selecione um produto.');                         return; }
+        if (!cliId)        { alert('Selecione um cliente.');                         return; }
+        if (!qtd || qtd<1) { alert('Informe uma quantidade válida.');                return; }
+        if (!pv  || pv<=0) { alert('Informe um preço de venda válido (> R$ 0,00).'); return; }
+
+        const opt     = selectProduto.options[selectProduto.selectedIndex];
+        const estoque = parseInt(opt.getAttribute('data-estoque')) || 0;
+        if (qtd > estoque) {
+            alert(`Estoque insuficiente. Disponível: ${estoque} un.`);
+            return;
+        }
+
+        const body = { produtoId: prodId, clienteId: cliId, quantidade: qtd, precoVenda: pv };
+
+        try {
+            const res = await fetch('/api/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                fecharModal();
+                await carregarSaidas();
+            } else {
+                const err = await res.json().catch(() => ({ mensagem: 'Erro desconhecido.' }));
+                alert(err.mensagem || 'Erro ao registrar venda.');
+            }
+        } catch { alert('Erro de conexão.'); }
+    });
+
+    // ── Cancelar venda ───────────────────────────────────────────────────
+    window.cancelarVenda = (id) => {
+        vendaParaExcluir = id;
+        document.getElementById('modalExcluir').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarExcluir').addEventListener('click', async () => {
+        if (!vendaParaExcluir) return;
+        try {
+            const res = await fetch(`/api/pedidos/${vendaParaExcluir}`, { method: 'DELETE' });
+            if (res.ok) {
+                document.getElementById('modalExcluir').classList.remove('active');
+                vendaParaExcluir = null;
+                await carregarSaidas();
+            } else { alert('Erro ao cancelar venda.'); }
+        } catch { alert('Erro de rede.'); }
+    });
+
+    // ── Abrir / fechar modais ────────────────────────────────────────────
+    function fecharModal() {
+        document.getElementById('modalSaida').classList.remove('active');
+        selectProduto.value = '';
+        selectCliente.value = '';
+        inputQtd.value = 1;
+        inputPreco.value = '';
+        document.getElementById('previewBox').style.display = 'none';
+        document.getElementById('precoHint').innerText = 'Selecione um produto primeiro';
+    }
+
+    document.getElementById('btnNovaSaida').addEventListener('click', () => {
+        carregarModal();
+        document.getElementById('modalSaida').classList.add('active');
+    });
+    document.getElementById('btnFecharModal').addEventListener('click', fecharModal);
+    document.getElementById('btnCancelarModal').addEventListener('click', fecharModal);
+    document.getElementById('btnFecharExcluir').addEventListener('click', () => document.getElementById('modalExcluir').classList.remove('active'));
+    document.getElementById('btnCancelarExcluir').addEventListener('click', () => document.getElementById('modalExcluir').classList.remove('active'));
+
+    document.getElementById('btn-logout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = 'login.html';
+    });
+
+    checarSessao();
+    carregarSaidas();
+});
+</script>
+</body>
+</html>

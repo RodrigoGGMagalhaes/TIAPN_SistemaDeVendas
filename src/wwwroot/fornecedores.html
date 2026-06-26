@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Vendas - Fornecedores</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <line x1="9" y1="21" x2="9" y2="9"></line>
+        </svg>
+        <h2>CONTROLE DE VENDAS</h2>
+    </div>
+    <nav class="menu">
+        <a href="index.html">Dashboard</a>
+        <a href="entradas.html">Entradas de Estoque</a>
+        <a href="saidas.html">Saídas / Vendas</a>
+        <a href="Clientes.html">Clientes</a>
+        <a href="fornecedores.html" class="active">Fornecedores</a>
+    </nav>
+    <a href="#" id="btn-logout" class="logout">Sair</a>
+</aside>
+
+<main class="main-content">
+    <header class="topbar">
+        <div class="user-info">
+            <span id="nome-usuario-sessao">Olá, Usuário</span>
+            <div class="avatar"></div>
+        </div>
+    </header>
+
+    <section class="page-container">
+        <h2 class="page-title">Cadastro de Fornecedores</h2>
+
+        <div class="card">
+            <div class="toolbar">
+                <div class="search-box">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Buscar fornecedor...">
+                </div>
+                <div class="actions-box">
+                    <button class="btn-primary" id="btnNovoFornecedor">+ Novo Fornecedor</button>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>NOME</th>
+                            <th>CNPJ</th>
+                            <th>TELEFONE</th>
+                            <th>AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fornecedoresTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination-footer">
+                <span id="fornecedoresInfo" class="pagination-info">0 fornecedores cadastrados</span>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Modal Cadastrar / Editar Fornecedor -->
+<div id="modalFornecedor" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="tituloModal">Novo Fornecedor</h2>
+            <button id="btnFecharModal" class="close-btn">&times;</button>
+        </div>
+        <form id="formFornecedor">
+            <input type="hidden" id="fornecedorId">
+            <div class="input-group">
+                <label for="nomeFornecedor">Nome da Empresa</label>
+                <input type="text" id="nomeFornecedor" placeholder="Ex: Laticínios Silva Ltda" required>
+            </div>
+            <div style="display:flex;gap:15px;">
+                <div class="input-group" style="flex:1;">
+                    <label for="cnpjFornecedor">CNPJ</label>
+                    <input type="text" id="cnpjFornecedor" placeholder="00.000.000/0001-00">
+                </div>
+                <div class="input-group" style="flex:1;">
+                    <label for="telefoneFornecedor">Telefone</label>
+                    <input type="text" id="telefoneFornecedor" placeholder="(00) 00000-0000">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+                <button type="submit" class="btn-primary">Salvar Fornecedor</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div id="modalExcluir" class="modal-overlay">
+    <div class="modal-content" style="max-width:380px;">
+        <div class="modal-header">
+            <h2>Confirmar Exclusão</h2>
+            <button id="btnFecharExcluir" class="close-btn">&times;</button>
+        </div>
+        <p id="textoExcluir" style="margin-bottom:20px;">Tem certeza que deseja excluir este fornecedor?</p>
+        <div class="modal-actions">
+            <button id="btnCancelarExcluir" class="btn-secondary">Cancelar</button>
+            <button id="btnConfirmarExcluir" class="btn-primary" style="background:var(--red-accent);">Excluir</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let todosFornecedores = [];
+    let fornecedorParaExcluir = null;
+    const tabelaCorpo = document.getElementById('fornecedoresTableBody');
+    const searchInput = document.getElementById('searchInput');
+
+    async function checarSessao() {
+        try {
+            const res = await fetch('/api/auth/sessao');
+            if (!res.ok) { window.location.href = 'login.html'; return; }
+            const d = await res.json();
+            document.getElementById('nome-usuario-sessao').innerText = `Olá, ${d.nome}`;
+        } catch { window.location.href = 'login.html'; }
+    }
+
+    async function carregarFornecedores() {
+        try {
+            const res = await fetch('/api/fornecedores');
+            if (res.ok) {
+                todosFornecedores = await res.json();
+                filtrar();
+            }
+        } catch (err) { console.error("Erro ao carregar fornecedores:", err); }
+    }
+
+    function renderizarTabela(lista) {
+        tabelaCorpo.innerHTML = '';
+        if (lista.length === 0) {
+            tabelaCorpo.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum fornecedor encontrado.</td></tr>';
+            document.getElementById('fornecedoresInfo').innerText = `Mostrando 0 de ${todosFornecedores.length} fornecedores`;
+            return;
+        }
+        lista.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>#${f.id}</td>
+                <td><strong>${f.nome}</strong></td>
+                <td>${f.cnpj || '-'}</td>
+                <td>${f.telefone || '-'}</td>
+                <td>
+                    <div class="action-icons">
+                        <button class="action-btn" title="Editar" onclick="editarFornecedor(${f.id})">✏️</button>
+                        <button class="action-btn" title="Excluir" onclick="excluirFornecedor(${f.id}, '${f.nome.replace(/'/g,"\\'")}')">🗑️</button>
+                    </div>
+                </td>`;
+            tabelaCorpo.appendChild(tr);
+        });
+        document.getElementById('fornecedoresInfo').innerText = `Mostrando ${lista.length} de ${todosFornecedores.length} fornecedores`;
+    }
+
+    function filtrar() {
+        const texto = searchInput.value.toLowerCase();
+        const filtrados = todosFornecedores.filter(f =>
+            f.nome.toLowerCase().includes(texto) ||
+            (f.cnpj || '').includes(texto) ||
+            (f.telefone || '').includes(texto)
+        );
+        renderizarTabela(filtrados);
+    }
+    searchInput.addEventListener('input', filtrar);
+
+    // --- Editar ---
+    window.editarFornecedor = (id) => {
+        const f = todosFornecedores.find(x => x.id === id);
+        if (!f) return;
+        document.getElementById('fornecedorId').value      = f.id;
+        document.getElementById('nomeFornecedor').value    = f.nome;
+        document.getElementById('cnpjFornecedor').value    = f.cnpj || '';
+        document.getElementById('telefoneFornecedor').value = f.telefone || '';
+        document.getElementById('tituloModal').innerText   = `Editar: ${f.nome}`;
+        document.getElementById('modalFornecedor').classList.add('active');
+    };
+
+    // --- Excluir ---
+    window.excluirFornecedor = (id, nome) => {
+        fornecedorParaExcluir = id;
+        document.getElementById('textoExcluir').innerText = `Tem certeza que deseja excluir "${nome}"?`;
+        document.getElementById('modalExcluir').classList.add('active');
+    };
+
+    document.getElementById('btnConfirmarExcluir').addEventListener('click', async () => {
+        if (!fornecedorParaExcluir) return;
+        try {
+            const res = await fetch(`/api/fornecedores/${fornecedorParaExcluir}`, { method: 'DELETE' });
+            if (res.ok) {
+                document.getElementById('modalExcluir').classList.remove('active');
+                fornecedorParaExcluir = null;
+                await carregarFornecedores();
+            } else { alert('Erro ao excluir fornecedor.'); }
+        } catch { alert('Erro de rede.'); }
+    });
+    document.getElementById('btnFecharExcluir').addEventListener('click', () => document.getElementById('modalExcluir').classList.remove('active'));
+    document.getElementById('btnCancelarExcluir').addEventListener('click', () => document.getElementById('modalExcluir').classList.remove('active'));
+
+    // --- Salvar ---
+    document.getElementById('formFornecedor').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('fornecedorId').value;
+        const fornecedor = {
+            nome:     document.getElementById('nomeFornecedor').value,
+            cnpj:     document.getElementById('cnpjFornecedor').value,
+            telefone: document.getElementById('telefoneFornecedor').value
+        };
+        try {
+            const url    = id ? `/api/fornecedores/${id}` : '/api/fornecedores';
+            const method = id ? 'PUT' : 'POST';
+            const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(fornecedor) });
+            if (res.ok) {
+                document.getElementById('modalFornecedor').classList.remove('active');
+                document.getElementById('formFornecedor').reset();
+                document.getElementById('fornecedorId').value = '';
+                await carregarFornecedores();
+            } else { alert('Erro ao salvar fornecedor.'); }
+        } catch { alert('Erro de rede.'); }
+    });
+
+    document.getElementById('btnNovoFornecedor').addEventListener('click', () => {
+        document.getElementById('formFornecedor').reset();
+        document.getElementById('fornecedorId').value = '';
+        document.getElementById('tituloModal').innerText = 'Novo Fornecedor';
+        document.getElementById('modalFornecedor').classList.add('active');
+    });
+    document.getElementById('btnFecharModal').addEventListener('click', () => document.getElementById('modalFornecedor').classList.remove('active'));
+    document.getElementById('btnCancelarModal').addEventListener('click', () => document.getElementById('modalFornecedor').classList.remove('active'));
+
+    document.getElementById('btn-logout').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = 'login.html';
+    });
+
+    checarSessao();
+    carregarFornecedores();
+});
+</script>
+</body>
+</html>
